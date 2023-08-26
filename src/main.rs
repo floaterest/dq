@@ -50,6 +50,11 @@ fn q2d(key: Key) -> Key {
     }
 }
 
+fn control(state:&AttributeSet<Key>) -> bool {
+    //! check if control key is pressed
+    state.contains(Key::KEY_LEFTCTRL) || state.contains(Key::KEY_RIGHTCTRL)
+}
+
 #[derive(Parser, Debug)]
 struct Args {
     /// keyboard device, /dev/input/event* or /dev/input/by-id/*
@@ -68,10 +73,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut fi = RawDevice::open(args.device)?;
 
     fi.grab()?;
-    let mut caplock = false;
-    let ctrl = |state: &AttributeSet<Key>| {
-        state.contains(Key::KEY_LEFTCTRL) || state.contains(Key::KEY_RIGHTCTRL)
-    };
+    let mut dvorak = false;
     loop {
         let state = fi.get_key_state()?;
         let events = fi
@@ -80,11 +82,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                 Kind::Synchronization(_) => None,
                 Kind::Key(Key::KEY_CAPSLOCK) => {
                     if event.value() == 0 {
-                        caplock = !caplock;
+                        dvorak = !dvorak;
                     }
                     None
                 }
-                _ if ctrl(&state) || !caplock => Some(event),
+                _ if control(&state) || !dvorak => Some(event),
                 Kind::Key(k) => Some(Event::new(EventType(0x01), q2d(k).code(), event.value())),
                 _ => Some(event),
             })
