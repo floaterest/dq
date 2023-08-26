@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::path::PathBuf;
-use std::time::{Duration, Instant};
+// use std::time::{Duration, Instant};
 
 use clap::Parser;
 use evdev::raw_stream::*;
@@ -69,14 +69,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut fi = RawDevice::open(args.device)?;
 
     fi.grab()?;
-    let start = Instant::now();
-    let duration = Duration::from_secs(5);
     let map = |event: Event, state: &AttributeSet<Key>| match event.kind() {
         _ if state.contains(Key::KEY_LEFTCTRL) || state.contains(Key::KEY_RIGHTCTRL) => event,
         Kind::Key(k) => Event::new(EventType(0x01), q2d(k).code(), event.value()),
         _ => event,
     };
-    while Instant::now() - start < duration {
+    // let start = Instant::now();
+    // let duration = Duration::from_secs(5);
+    // while Instant::now() - start < duration {
+    loop {
         let state = fi.get_key_state()?;
         let events = fi
             .fetch_events()?
@@ -85,6 +86,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             .collect::<Vec<_>>();
         fo.emit(&events)?;
     }
-    fi.ungrab()?;
-    Ok(())
+    // fi.ungrab()?;
+    // Ok(())
 }
