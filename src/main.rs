@@ -1,6 +1,5 @@
 use std::error::Error;
 use std::path::PathBuf;
-// use std::time::{Duration, Instant};
 
 use clap::Parser;
 use evdev::raw_stream::*;
@@ -69,23 +68,26 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut fi = RawDevice::open(args.device)?;
 
     fi.grab()?;
-    let map = |event: Event, state: &AttributeSet<Key>| match event.kind() {
-        _ if state.contains(Key::KEY_LEFTCTRL) || state.contains(Key::KEY_RIGHTCTRL) => event,
-        Kind::Key(k) => Event::new(EventType(0x01), q2d(k).code(), event.value()),
-        _ => event,
+    let mut caplock = false;
+    let ctrl = |state: &AttributeSet<Key>| {
+        state.contains(Key::KEY_LEFTCTRL) || state.contains(Key::KEY_RIGHTCTRL)
     };
-    // let start = Instant::now();
-    // let duration = Duration::from_secs(5);
-    // while Instant::now() - start < duration {
     loop {
         let state = fi.get_key_state()?;
         let events = fi
             .fetch_events()?
             .filter(|event| !matches!(event.kind(), Kind::Synchronization(_)))
-            .map(|event| map(event, &state))
+            .map(|event| match event.kind() {
+                Kind::Key(Key::KEY_CAPSLOCK) if event.value() == 0 => {
+                    caplock = !caplock;
+                    println!("caplock: {}", caplock);
+                    event
+                }
+                _ if ctrl(&state) || !caplock => event,
+                Kind::Key(k) => Event::new(EventType(0x01), q2d(k).code(), event.value()),
+                _ => event,
+            })
             .collect::<Vec<_>>();
         fo.emit(&events)?;
     }
-    // fi.ungrab()?;
-    // Ok(())
 }
