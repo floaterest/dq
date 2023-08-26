@@ -2,10 +2,10 @@ use std::error::Error;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
+use clap::Parser;
 use evdev::raw_stream::*;
 use evdev::uinput::*;
 use evdev::*;
-use clap::Parser;
 
 fn q2d(key: Key) -> Key {
     //! QWERTY to Dvorak
@@ -56,6 +56,9 @@ struct Args {
     /// keyboard device, /dev/input/event* or /dev/input/by-id/*
     device: PathBuf,
 }
+
+type Kind = InputEventKind;
+type Event = InputEvent;
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let mut keys = AttributeSet::<Key>::new();
@@ -68,19 +71,19 @@ fn main() -> Result<(), Box<dyn Error>> {
     kbd.grab()?;
     let start = Instant::now();
     let duration = Duration::from_secs(5);
+    let map = |ev: Event, state: &AttributeSet<Key>| match ev.kind() {
+        _ if state.contains(Key::KEY_LEFTCTRL) || state.contains(Key::KEY_RIGHTCTRL) => ev,
+        Kind::Key(k) => Event::new(EventType(0x01), q2d(k).code(), ev.value()),
+        _ => ev,
+    };
     while Instant::now() - start < duration {
-        // let state = i.get_key_state()?;
+        let state = kbd.get_key_state()?;
+        let map = |ev: Event| map(ev, &state);
         let events = kbd
             .fetch_events()?
-            .filter(|ev| !matches!(ev.kind(), InputEventKind::Synchronization(_)))
-            .map(|ev| match ev.kind() {
-                InputEventKind::Key(k) => {
-                    InputEvent::new(EventType(0x01), q2d(k).code(), ev.value())
-                }
-                _ => ev,
-            })
+            .filter(|ev| !matches!(ev.kind(), Kind::Synchronization(_)))
+            .map(map)
             .collect::<Vec<_>>();
-        // println!("{:?}", events);
         dev.emit(&events)?;
     }
     kbd.ungrab()?;
