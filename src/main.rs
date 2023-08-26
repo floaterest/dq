@@ -65,27 +65,26 @@ fn main() -> Result<(), Box<dyn Error>> {
     for i in 0..0x23e {
         keys.insert(Key(i));
     }
-    let mut dev = VirtualDeviceBuilder::new()?.name("DQ").with_keys(&keys)?.build()?;
-    let mut kbd = RawDevice::open(args.device)?;
+    let mut fo = VirtualDeviceBuilder::new()?.name("DQ").with_keys(&keys)?.build()?;
+    let mut fi = RawDevice::open(args.device)?;
 
-    kbd.grab()?;
+    fi.grab()?;
     let start = Instant::now();
     let duration = Duration::from_secs(5);
-    let map = |ev: Event, state: &AttributeSet<Key>| match ev.kind() {
-        _ if state.contains(Key::KEY_LEFTCTRL) || state.contains(Key::KEY_RIGHTCTRL) => ev,
-        Kind::Key(k) => Event::new(EventType(0x01), q2d(k).code(), ev.value()),
-        _ => ev,
+    let map = |event: Event, state: &AttributeSet<Key>| match event.kind() {
+        _ if state.contains(Key::KEY_LEFTCTRL) || state.contains(Key::KEY_RIGHTCTRL) => event,
+        Kind::Key(k) => Event::new(EventType(0x01), q2d(k).code(), event.value()),
+        _ => event,
     };
     while Instant::now() - start < duration {
-        let state = kbd.get_key_state()?;
-        let map = |ev: Event| map(ev, &state);
-        let events = kbd
+        let state = fi.get_key_state()?;
+        let events = fi
             .fetch_events()?
-            .filter(|ev| !matches!(ev.kind(), Kind::Synchronization(_)))
-            .map(map)
+            .filter(|event| !matches!(event.kind(), Kind::Synchronization(_)))
+            .map(|event| map(event, &state))
             .collect::<Vec<_>>();
-        dev.emit(&events)?;
+        fo.emit(&events)?;
     }
-    kbd.ungrab()?;
+    fi.ungrab()?;
     Ok(())
 }
