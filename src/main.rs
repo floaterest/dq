@@ -76,16 +76,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         let state = fi.get_key_state()?;
         let events = fi
             .fetch_events()?
-            .filter(|event| !matches!(event.kind(), Kind::Synchronization(_)))
-            .map(|event| match event.kind() {
-                Kind::Key(Key::KEY_CAPSLOCK) if event.value() == 0 => {
-                    caplock = !caplock;
-                    println!("caplock: {}", caplock);
-                    event
+            .filter_map(|event| match event.kind() {
+                Kind::Synchronization(_) => None,
+                Kind::Key(Key::KEY_CAPSLOCK) => {
+                    if event.value() == 0 {
+                        caplock = !caplock;
+                    }
+                    None
                 }
-                _ if ctrl(&state) || !caplock => event,
-                Kind::Key(k) => Event::new(EventType(0x01), q2d(k).code(), event.value()),
-                _ => event,
+                _ if ctrl(&state) || !caplock => Some(event),
+                Kind::Key(k) => Some(Event::new(EventType(0x01), q2d(k).code(), event.value())),
+                _ => Some(event),
             })
             .collect::<Vec<_>>();
         fo.emit(&events)?;
