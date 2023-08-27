@@ -6,9 +6,9 @@ use evdev::raw_stream::*;
 use evdev::uinput::*;
 use evdev::*;
 
-fn q2d(key: Key) -> Key {
-    //! QWERTY to Dvorak
-    match key {
+fn q2d(key: Key, value: i32) -> InputEvent {
+    //! QWERTY key to Dvorak event
+    let key = match key {
         Key::KEY_MINUS => Key::KEY_LEFTBRACE,
         Key::KEY_EQUAL => Key::KEY_RIGHTBRACE,
 
@@ -47,7 +47,8 @@ fn q2d(key: Key) -> Key {
         Key::KEY_DOT => Key::KEY_V,
         Key::KEY_SLASH => Key::KEY_Z,
         k => k,
-    }
+    };
+    Event::new(EventType::KEY, key.code(), value)
 }
 
 fn control(state: &AttributeSet<Key>) -> bool {
@@ -88,7 +89,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     None
                 }
                 _ if control(&state) || !dvorak => Some(event),
-                Kind::Key(k) => Some(Event::new(EventType::KEY, q2d(k).code(), value)),
+                Kind::Key(k) => Some(q2d(k, value)),
                 _ => Some(event),
             })
             .collect::<Vec<_>>();
