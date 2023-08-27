@@ -87,7 +87,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     None
                 }
                 _ if control(&state) || !dvorak => Some(event),
-                Kind::Key(k) => Some(Event::new(EventType(0x01), q2d(k).code(), event.value())),
+                Kind::Key(k) => Some(Event::new(EventType::KEY, q2d(k).code(), event.value())),
                 _ => Some(event),
             })
             .collect::<Vec<_>>();
