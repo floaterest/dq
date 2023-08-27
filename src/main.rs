@@ -50,7 +50,7 @@ fn q2d(key: Key) -> Key {
     }
 }
 
-fn control(state:&AttributeSet<Key>) -> bool {
+fn control(state: &AttributeSet<Key>) -> bool {
     //! check if control key is pressed
     state.contains(Key::KEY_LEFTCTRL) || state.contains(Key::KEY_RIGHTCTRL)
 }
@@ -78,16 +78,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         let state = fi.get_key_state()?;
         let events = fi
             .fetch_events()?
-            .filter_map(|event| match event.kind() {
+            .map(|event| (event, event.kind(), event.value()))
+            .filter_map(|(event, kind, value)| match kind {
                 Kind::Synchronization(_) => None,
                 Kind::Key(Key::KEY_CAPSLOCK) => {
-                    if event.value() == 0 {
+                    if value == 0 {
                         dvorak = !dvorak;
                     }
                     None
                 }
                 _ if control(&state) || !dvorak => Some(event),
-                Kind::Key(k) => Some(Event::new(EventType::KEY, q2d(k).code(), event.value())),
+                Kind::Key(k) => Some(Event::new(EventType::KEY, q2d(k).code(), value)),
                 _ => Some(event),
             })
             .collect::<Vec<_>>();
