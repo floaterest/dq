@@ -6,6 +6,9 @@ use evdev::raw_stream::*;
 use evdev::uinput::*;
 use evdev::*;
 
+const KEY: EventType = EventType::KEY;
+const LED: EventType = EventType::LED;
+
 fn q2d(key: Key, value: i32) -> InputEvent {
     //! QWERTY key to Dvorak event
     let key = match key {
@@ -48,12 +51,17 @@ fn q2d(key: Key, value: i32) -> InputEvent {
         Key::KEY_SLASH => Key::KEY_Z,
         k => k,
     };
-    Event::new(EventType::KEY, key.code(), value)
+    Event::new(KEY, key.code(), value)
 }
 
 fn control(state: &AttributeSet<Key>) -> bool {
     //! check if control key is pressed
     state.contains(Key::KEY_LEFTCTRL) || state.contains(Key::KEY_RIGHTCTRL)
+}
+
+fn caplock(brightness: i32) -> InputEvent {
+    //! caplock LED event
+    Event::new(LED, LedType::LED_CAPSL.0, brightness)
 }
 
 #[derive(Parser, Debug)]
@@ -75,6 +83,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     fi.grab()?;
     let mut dvorak = false;
+    let mut led = None;
     loop {
         let state = fi.get_key_state()?;
         let events = fi
@@ -85,6 +94,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 Kind::Key(Key::KEY_CAPSLOCK) => {
                     if value == 0 {
                         dvorak = !dvorak;
+                        led = Some(caplock(if dvorak { i32::MAX } else { 0 }));
                     }
                     None
                 }
@@ -93,6 +103,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                 _ => Some(event),
             })
             .collect::<Vec<_>>();
+        if let Some(event) = led {
+            fi.send_events(&[event])?;
+        }
         fo.emit(&events)?;
     }
 }
