@@ -90,16 +90,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             .fetch_events()?
             .map(|event| (event, event.kind(), event.value()))
             .filter_map(|(event, kind, value)| match kind {
-                Kind::Synchronization(_) => None,
+                Kind::Synchronization(_) | Kind::Key(Key::KEY_CAPSLOCK) if value == 0 => None,
                 Kind::Key(Key::KEY_CAPSLOCK) => {
-                    if value == 0 {
-                        dvorak = !dvorak;
-                        toggle = Some(capslock(if dvorak { i32::MAX } else { 0 }));
-                    }
+                    dvorak = !dvorak;
+                    toggle = Some(capslock(if dvorak { i32::MAX } else { 0 }));
                     None
                 }
-                _ if control(&state) || !dvorak => Some(event),
-                Kind::Key(k) => Some(q2d(k, value)),
+                Kind::Key(k) if !control(&state) && dvorak => Some(q2d(k, value)),
                 _ => Some(event),
             })
             .collect::<Vec<_>>();
