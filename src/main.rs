@@ -59,8 +59,8 @@ fn control(state: &AttributeSet<Key>) -> bool {
     state.contains(Key::KEY_LEFTCTRL) || state.contains(Key::KEY_RIGHTCTRL)
 }
 
-fn caplock(brightness: i32) -> InputEvent {
-    //! caplock LED event
+fn capslock(brightness: i32) -> InputEvent {
+    //! capslock LED event
     Event::new(LED, LedType::LED_CAPSL.0, brightness)
 }
 
@@ -83,7 +83,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     fi.grab()?;
     let mut dvorak = false;
-    let mut led = None;
+    let mut toggle = None;
     loop {
         let state = fi.get_key_state()?;
         let events = fi
@@ -94,7 +94,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 Kind::Key(Key::KEY_CAPSLOCK) => {
                     if value == 0 {
                         dvorak = !dvorak;
-                        led = Some(caplock(if dvorak { i32::MAX } else { 0 }));
+                        toggle = Some(capslock(if dvorak { i32::MAX } else { 0 }));
                     }
                     None
                 }
@@ -103,7 +103,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 _ => Some(event),
             })
             .collect::<Vec<_>>();
-        if let Some(event) = led {
+        if let Some(event) = toggle {
             fi.send_events(&[event])?;
         }
         fo.emit(&events)?;
