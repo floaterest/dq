@@ -83,9 +83,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     fi.grab()?;
     let mut dvorak = false;
-    let mut toggle = None;
     loop {
         let state = fi.get_key_state()?;
+        let mut toggle = None;
         let events = fi
             .fetch_events()?
             .map(|event| (event, event.kind(), event.value()))
