@@ -90,16 +90,20 @@ fn main() -> Result<(), Box<dyn Error>> {
             .fetch_events()?
             .map(|event| (event, event.kind(), event.value()))
             .filter_map(|(event, kind, value)| match kind {
+                // sync events are sent by emit automatically
                 Kind::Synchronization(_) | Kind::Key(Key::KEY_CAPSLOCK) if value == 0 => None,
+                // toggle dvorak on capslock press
                 Kind::Key(Key::KEY_CAPSLOCK) => {
                     dvorak = !dvorak;
                     toggle = Some(capslock(if dvorak { i32::MAX } else { 0 }));
                     None
                 }
+                // map qwerty to dvorak
                 Kind::Key(k) if !control(&state) && dvorak => Some(q2d(k, value)),
                 _ => Some(event),
             })
             .collect::<Vec<_>>();
+        // toggle capslock LED
         if let Some(event) = toggle {
             fi.send_events(&[event])?;
         }
