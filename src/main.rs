@@ -6,10 +6,13 @@ use evdev::raw_stream::*;
 use evdev::uinput::*;
 use evdev::*;
 
+type Kind = InputEventKind;
+type Event = InputEvent;
+
 const KEY: EventType = EventType::KEY;
 const LED: EventType = EventType::LED;
 
-fn q2d(key: Key, value: i32) -> InputEvent {
+fn q2d(key: Key, value: i32) -> Event {
     //! QWERTY key to Dvorak event
     let key = match key {
         Key::KEY_MINUS => Key::KEY_LEFTBRACE,
@@ -54,12 +57,14 @@ fn q2d(key: Key, value: i32) -> InputEvent {
     Event::new(KEY, key.code(), value)
 }
 
+#[inline]
 fn control(state: &AttributeSet<Key>) -> bool {
     //! check if control key is pressed
     state.contains(Key::KEY_LEFTCTRL) || state.contains(Key::KEY_RIGHTCTRL)
 }
 
-fn capslock(brightness: i32) -> InputEvent {
+#[inline]
+fn capslock(brightness: i32) -> Event {
     //! capslock LED event
     Event::new(LED, LedType::LED_CAPSL.0, brightness)
 }
@@ -70,8 +75,6 @@ struct Args {
     device: PathBuf,
 }
 
-type Kind = InputEventKind;
-type Event = InputEvent;
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let keys = AttributeSet::<Key>::from_iter((0..0x23e).map(Key));
