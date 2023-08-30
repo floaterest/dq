@@ -74,10 +74,7 @@ type Kind = InputEventKind;
 type Event = InputEvent;
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
-    let mut keys = AttributeSet::<Key>::new();
-    for i in 0..0x23e {
-        keys.insert(Key(i));
-    }
+    let keys = AttributeSet::<Key>::from_iter((0..0x23e).map(Key));
     let mut fo = VirtualDeviceBuilder::new()?.name("DQ").with_keys(&keys)?.build()?;
     let mut fi = RawDevice::open(args.device)?;
 
