@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::ops::Deref;
 use std::path::PathBuf;
 
 use clap::Parser;
@@ -80,12 +81,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     let keys = AttributeSet::<Key>::from_iter((0..0x23e).map(Key));
     let mut fo = VirtualDeviceBuilder::new()?.name("DQ").with_keys(&keys)?.build()?;
     let mut fi = RawDevice::open(args.device)?;
+    // let mut fi = Device::open(args.device)?;
 
     fi.grab()?;
     let mut dvorak = false;
     loop {
         let state = fi.get_key_state()?;
+        // let state = fi.cached_state();
+        // let state = AttributeSet::<Key>::from_iter(state.key_vals().unwrap().iter());
         let mut toggle = None;
+        println!("{:?}", state);
         let events = fi
             .fetch_events()?
             .map(|event| (event, event.kind(), event.value()))
