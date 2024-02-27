@@ -1,9 +1,8 @@
 use std::error::Error;
-use std::ops::Deref;
 use std::path::PathBuf;
 
 use clap::Parser;
-use evdev::raw_stream::*;
+// use evdev::raw_stream::*;
 use evdev::uinput::*;
 use evdev::*;
 
@@ -58,13 +57,11 @@ fn q2d(key: Key, value: i32) -> Event {
     Event::new(KEY, key.code(), value)
 }
 
-#[inline]
 fn control(state: &AttributeSet<Key>) -> bool {
     //! check if control key is pressed
     state.contains(Key::KEY_LEFTCTRL) || state.contains(Key::KEY_RIGHTCTRL)
 }
 
-#[inline]
 fn capslock(brightness: i32) -> Event {
     //! capslock LED event
     Event::new(LED, LedType::LED_CAPSL.0, brightness)
@@ -76,21 +73,28 @@ struct Args {
     device: PathBuf,
 }
 
+#[derive(Debug)]
+struct InputE {
+    kind: Kind,
+    value: i32,
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let keys = AttributeSet::<Key>::from_iter((0..0x23e).map(Key));
     let mut fo = VirtualDeviceBuilder::new()?.name("DQ").with_keys(&keys)?.build()?;
-    let mut fi = RawDevice::open(args.device)?;
-    // let mut fi = Device::open(args.device)?;
+
+    // let mut fi = RawDevice::open(args.device)?;
+    let mut fi = Device::open(args.device)?;
 
     fi.grab()?;
     let mut dvorak = false;
     loop {
-        let state = fi.get_key_state()?;
-        // let state = fi.cached_state();
-        // let state = AttributeSet::<Key>::from_iter(state.key_vals().unwrap().iter());
+        // let state = fi.get_key_state()?;
+        let state = fi.cached_state();
+        let state = AttributeSet::<Key>::from_iter(state.key_vals().unwrap().iter());
+
         let mut toggle = None;
-        println!("{:?}", state);
         let events = fi
             .fetch_events()?
             .map(|event| (event, event.kind(), event.value()))
@@ -112,6 +116,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         if let Some(event) = toggle {
             fi.send_events(&[event])?;
         }
+        let msg: Vec<_> =
+            events.iter().map(|ev| InputE { kind: ev.kind(), value: ev.value()}).collect();
+        println!("{msg:?}");
         fo.emit(&events)?;
     }
 }
