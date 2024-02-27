@@ -73,12 +73,6 @@ struct Args {
     device: PathBuf,
 }
 
-#[derive(Debug)]
-struct InputE {
-    kind: Kind,
-    value: i32,
-}
-
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let keys = AttributeSet::<Key>::from_iter((0..0x23e).map(Key));
@@ -116,9 +110,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         if let Some(event) = toggle {
             fi.send_events(&[event])?;
         }
-        let msg: Vec<_> =
-            events.iter().map(|ev| InputE { kind: ev.kind(), value: ev.value()}).collect();
-        println!("{msg:?}");
+
+        let ss: Vec<_> = events
+            .iter()
+            .map(|ev| format!("{{ kind: {:?}, value: {:?} }}", ev.kind(), ev.value()))
+            .collect();
+        println!("[{}]", ss.join(", "));
         fo.emit(&events)?;
     }
 }
